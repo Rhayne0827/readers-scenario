@@ -11,9 +11,9 @@ export const SCENARIOS: Scenario[] = [
     id: "first-narration", title: "The First Narration", tier: "TIER 01 · AWAKENING", day: 1, objective: "Survive the first rule.",
     narration: ["At 06:14, every screen in the city went black.", "Then a voice arrived from inside the silence. It spoke as if the world had already agreed to become a story.", "SCENARIO 01 — PROVE THAT YOU ARE LISTENING.", "A pale line of text waits beneath your window. What will you do?"],
     choices: [
-      { id: "read", title: "Read the rule aloud.", subtitle: "If it is a story, give it a witness.", tone: "clever", statDelta: { storySense: 1, coins: 6 }, reward: "Story Sense +1 · 6 coins", next: "shelter", sponsor: "The Archivist tilts their head. Interesting." },
-      { id: "hide", title: "Pull the curtains and wait.", subtitle: "Safe is still a kind of answer.", tone: "safe", statDelta: { hp: -3, willpower: 1 }, reward: "Willpower +1", next: "shelter", sponsor: "The Quiet Judge withholds approval." },
-      { id: "touch", title: "Touch the line of text.", subtitle: "Boldness may be the only language it respects.", tone: "bold", statDelta: { hp: -7, strength: 1, coins: 12 }, reward: "Strength +1 · 12 coins", next: "shelter", sponsor: "The Red Witness laughs once. Then stops." },
+      { id: "read", title: "Read the rule aloud.", subtitle: "If it is a story, give it a witness.", tone: "clever", statDelta: { storySense: 1, coins: 6 }, reward: "Story Sense +1 · 6 coins", next: "price-of-shelter", sponsor: "The Archivist tilts their head. Interesting." },
+      { id: "hide", title: "Pull the curtains and wait.", subtitle: "Safe is still a kind of answer.", tone: "safe", statDelta: { hp: -3, willpower: 1 }, reward: "Willpower +1", next: "price-of-shelter", sponsor: "The Quiet Judge withholds approval." },
+      { id: "touch", title: "Touch the line of text.", subtitle: "Boldness may be the only language it respects.", tone: "bold", statDelta: { hp: -7, strength: 1, coins: 12 }, reward: "Strength +1 · 12 coins", next: "price-of-shelter", sponsor: "The Red Witness laughs once. Then stops." },
     ],
   },
   {
