@@ -1,25 +1,26 @@
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { Streamdown } from 'streamdown';
+import { useEffect, useMemo, useState } from "react";
+import { GameCanvas } from "@/components/GameCanvas";
+import { findScenario, ITEMS } from "@/game/content/scenarios";
+import { beginChoices, continueRun, initialState, isChoiceLocked, resolveChoice, restartRun, useItem } from "@/game/ScenarioEngine";
+import type { GameState } from "@/game/types";
 
-/**
- * All content in this page are only for example, replace with your own feature implementation
- * When building pages, remember your instructions in Frontend Best Practices, Design Guide and Common Pitfalls
- */
+const toneClass = (tone: string) => `choice-${tone}`;
 export default function Home() {
-  // If theme is switchable in App.tsx, we can implement theme toggling like this:
-  // const { theme, toggleTheme } = useTheme();
-
-  return (
-    <div className="min-h-screen flex flex-col">
-      <main>
-        {/* Example: lucide-react for icons */}
-        <Loader2 className="animate-spin" />
-        Example Page
-        {/* Example: Streamdown for markdown rendering */}
-        <Streamdown>Any **markdown** content</Streamdown>
-        <Button variant="default">Example Button</Button>
-      </main>
-    </div>
-  );
+  const [state, setState] = useState<GameState>(() => initialState());
+  const scenario = useMemo(() => findScenario(state.scenarioId), [state.scenarioId]);
+  const [revealed, setRevealed] = useState(0);
+  const demo = new URLSearchParams(window.location.search).has("demo");
+  useEffect(() => { setRevealed(0); const timer = window.setInterval(() => setRevealed((v) => Math.min(scenario.narration.length, v + 1)), 900); return () => window.clearInterval(timer); }, [scenario.id]);
+  const ready = state.phase !== "reading" || revealed >= scenario.narration.length;
+  useEffect(() => { if (state.phase === "reading" && revealed >= scenario.narration.length) setState((current) => beginChoices(current)); }, [revealed, scenario.narration.length, state.phase]);
+  useEffect(() => { if (!demo || state.phase !== "reading") return; setRevealed(scenario.narration.length); const timer = window.setTimeout(() => setState((current) => beginChoices(current)), 120); return () => window.clearTimeout(timer); }, [demo, scenario.id, scenario.narration.length, state.phase]);
+  const reset = () => { setState(restartRun()); setRevealed(0); };
+  return <main className="reader-app"><GameCanvas /><div className="grain" /><div className="reader-frame">
+    <header className="topbar"><div className="brand-mark"><img src="/manus-storage/readers-scenario-emblem_ab930585.png" /><div><div className="eyebrow">SCENARIO PROTOCOL</div><h1>THE READER'S SCENARIO</h1></div></div><div className="top-meta"><span>{scenario.tier}</span><b>DAY {scenario.day}</b><i>EVENING</i></div></header>
+    <div className="game-grid">
+      <aside className="side-panel left-panel"><div className="panel-kicker">STATUS / SURVIVOR 01</div><div className="hp-block"><span className="hp-label">VITALITY</span><strong>{state.stats.hp}<small> / {state.stats.maxHp}</small></strong><div className="meter"><span style={{ width: `${state.stats.hp}%` }} /></div></div><div className="stat-list">{([["strength","STR"],["agility","AGI"],["willpower","WIL"],["storySense","SEN"]] as const).map(([key, label]) => <div className="stat-row" key={key}><span>{label}</span><b>{state.stats[key]}</b><em>{key === "storySense" ? "STORY SENSE" : key.toUpperCase()}</em></div>)}</div><div className="condition"><div className="panel-kicker">CONDITION</div><b className={state.stats.hp < 30 ? "danger" : "good"}>{state.stats.hp < 30 ? "WOUNDED" : "STILL STANDING"}</b><p>{state.stats.hp < 30 ? "The page is closing around you." : "The audience has not looked away."}</p></div><button className="quiet-button" onClick={reset}>RESTART RUN <span>↻</span></button></aside>
+      <section className="story-panel"><div className="story-head"><div><div className="panel-kicker">ACTIVE SCENARIO · {scenario.day.toString().padStart(2,"0")}</div><h2>{scenario.title}</h2></div><div className="objective"><span>OBJECTIVE</span><b>{scenario.objective}</b></div></div><div className="story-copy">{scenario.narration.slice(0, revealed).map((line, i) => <p key={line} className={i === scenario.narration.length - 1 ? "last-line" : ""}>{line}</p>)}{!ready && <span className="cursor">▌</span>}</div>{state.lastOutcome && <div className={`outcome ${state.lastOutcome.tone}`}><span>{state.lastOutcome.tone === "good" ? "✦" : "!"}</span><div><b>{state.lastOutcome.text}</b>{state.lastOutcome.reward && <small>{state.lastOutcome.reward}</small>}</div></div>}{(state.phase === "win" || state.phase === "lose") ? <div className={`ending ${state.phase}`}><div className="ending-sigil">{state.phase === "win" ? "✦" : "∅"}</div><div><div className="panel-kicker">{state.phase === "win" ? "SCENARIO CLEAR" : "FALL STATE"}</div><h3>{state.phase === "win" ? "The story stabilizes." : "The page goes dark."}</h3><p>{state.phase === "win" ? "You were never the chosen one. You were the one who kept reading." : "This was not the ending you wanted. It is still an ending."}</p></div><button className="primary-button" onClick={reset}>READ AGAIN</button></div> : state.phase === "between" ? <div className="between"><div><div className="panel-kicker">SCENARIO RESOLVED</div><b>The next page is waiting.</b></div><button className="primary-button" onClick={() => setState(continueRun(state))}>CONTINUE <span>→</span></button></div> : <div className="choices"><div className="choice-label">WHAT WILL YOU DO?</div>{ready ? scenario.choices.map((choice, index) => { const locked = isChoiceLocked(choice, state); return <button key={choice.id} disabled={locked} className={`choice ${toneClass(choice.tone)} ${locked ? "locked" : ""}`} onClick={() => setState(resolveChoice(state, choice))}><span className="choice-num">0{index + 1}</span><span className="choice-main"><b>{locked ? "REQUIREMENT NOT MET" : choice.title}</b><small>{locked ? choice.requirement?.label : choice.subtitle}</small></span><span className="choice-tag">{locked ? "LOCKED" : choice.tone.toUpperCase()}</span></button>; }) : <button className="reveal-button" onClick={() => setRevealed(scenario.narration.length)}>REVEAL THE REST <span>↘</span></button>}</div>}</section>
+      <aside className="side-panel right-panel"><div className="panel-kicker">INVENTORY <span>{Object.values(state.inventory).reduce((a,b)=>a+b,0)} / 05</span></div><div className="inventory">{ITEMS.map((item) => <div className="item-row" key={item.id}><span className="item-icon">{item.icon}</span><div><b>{item.short}</b><small>{item.description}</small></div><strong>{state.inventory[item.id] ?? 0}</strong>{item.usable && <button disabled={!state.inventory[item.id]} onClick={() => setState(useItem(state, item.id))}>USE</button>}</div>)}</div><div className="coins"><span>COINS</span><b>◈ {state.coins}</b></div><div className="panel-kicker sponsor-title">SPONSOR LOG</div><div className="sponsor-list">{state.sponsorLog.map((entry, i) => <div className={`sponsor ${entry.tone}`} key={`${entry.text}-${i}`}><span>{entry.tone === "approve" ? "✦" : entry.tone === "warn" ? "!" : "◌"}</span><p><b>{entry.label}</b>{entry.text}</p></div>)}</div></aside>
+    </div><footer className="bottom-strip"><div className="panel-kicker">SCENARIO HISTORY</div><div className="history-list">{state.history.slice(0, 4).map((h, i) => <div key={`${h.text}-${i}`}><span>{String(h.day).padStart(2,"0")}</span><p>{h.text}</p></div>)}</div></footer>
+  </div></main>;
 }
